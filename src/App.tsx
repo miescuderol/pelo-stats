@@ -1,22 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import { ReactComponent as Logo } from './logo.svg';
-import { Counter } from './features/counter/Counter';
+import { useEffect, useState } from 'react';
 import './App.css';
 import userInfo from './config/.user-config.json';
 
+const SERVER_URL = 'http://localhost:3001';
 
 function App() {
     const [userId, setUserId] = useState('');
     const [sessionId, setSessionId] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
-        fetch("http://localhost:3001/auth", {method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(userInfo)})      
-        .then((res) => res.json())
-        .then(
-            (result) => {
+        fetch(`${SERVER_URL}/auth`, {method: "POST", headers: {'Content-Type': 'application/json'}, body: JSON.stringify(userInfo)})      
+        .then((response) => {
+            if (response.ok) {
+                return response.json();
+            } 
+            throw response;
+        })
+        .then((result) => {
                 console.log(result)
-                // setUserId(result.user_id);
-                // setSessionId(result.session_id);
+                setUserId(result.user_id);
+                setSessionId(result.session_id);
             },
             // Note: it's important to handle errors here
             // instead of a catch() block so that we don't swallow
@@ -24,59 +29,53 @@ function App() {
             (error) => {
                 console.log(error);
             }
+        ).catch((error) =>
+            setError(error)
+        ).finally(() => 
+            setLoading(false)
         )
-    });
+    }, []);
 
+    function getWorkouts() {
+        fetch(`${SERVER_URL}/user/${userId}/workouts/${sessionId}`)
+        .then((response) => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw response;
+        })
+        .then((workouts) => {
+            console.log(workouts);
+        })
+        .catch((error) => {
+            setError(error);
+        })
+    }
 
-  return (
-    <div className="App">
-      <header className="App-header">
-        <Logo className="App-logo" />
-        <Counter />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <span>
-          <span>Learn </span>
-          <a
-            className="App-link"
-            href="https://reactjs.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            React
-          </a>
-          <span>, </span>
-          <a
-            className="App-link"
-            href="https://redux.js.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Redux
-          </a>
-          <span>, </span>
-          <a
-            className="App-link"
-            href="https://redux-toolkit.js.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Redux Toolkit
-          </a>
-          ,<span> and </span>
-          <a
-            className="App-link"
-            href="https://react-redux.js.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            React Redux
-          </a>
-        </span>
-      </header>
-    </div>
-  );
+    if (error) {
+        return <p>{error}</p>;
+    }
+    if (loading) {
+        return <p>Loading...</p>
+    }
+    return (
+        <>
+            <h1>Logged in!</h1>
+            <div>
+                <strong>User Id:</strong>
+                <p>{userId}</p>
+            </div>
+            <div>
+                <strong>Session Id:</strong>
+                <p>{sessionId}</p>
+            </div>
+            <button
+                onClick={getWorkouts}
+            >Get Workouts</button>
+
+        </>
+
+    );
 }
 
 export default App;
